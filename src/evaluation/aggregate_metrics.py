@@ -18,7 +18,7 @@ def main():
     metrics_dir = exp_dir / "metrics"
 
     rows = []
-    for name in ["baseline", "method1_single", "method2_plan_decode"]:
+    for name in ["method1_llm_dlm", "method2_dlm_llm"]:
         path = metrics_dir / f"{name}.json"
         if not path.exists():
             continue
