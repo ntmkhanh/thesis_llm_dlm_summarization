@@ -1,4 +1,5 @@
 import argparse
+import inspect
 import os
 import sys
 
@@ -37,6 +38,19 @@ def parse_args():
     return p.parse_args()
 
 
+
+def _build_training_args(args_class, **kwargs):
+    sig = inspect.signature(args_class.__init__)
+    supported = set(sig.parameters.keys())
+    out = {k: v for k, v in kwargs.items() if k in supported}
+    if "evaluation_strategy" in supported:
+        out["evaluation_strategy"] = "epoch"
+    elif "eval_strategy" in supported:
+        out["eval_strategy"] = "epoch"
+    if "save_strategy" in supported:
+        out["save_strategy"] = "epoch"
+    return args_class(**out)
+
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
@@ -69,15 +83,14 @@ def main():
     train_tok = train_ds.map(preprocess, batched=True, remove_columns=train_ds.column_names)
     val_tok = val_ds.map(preprocess, batched=True, remove_columns=val_ds.column_names)
 
-    targs = Seq2SeqTrainingArguments(
+    targs = _build_training_args(Seq2SeqTrainingArguments,
         output_dir=args.output_dir,
         num_train_epochs=args.epochs,
         learning_rate=args.lr,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
+        
         logging_steps=20,
         save_total_limit=2,
         predict_with_generate=True,
