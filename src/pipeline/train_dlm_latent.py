@@ -5,8 +5,10 @@ import sys
 
 import torch
 import torch.nn.functional as F
+import csv
 from tqdm.auto import tqdm
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
@@ -29,8 +31,12 @@ def parse_args():
     p.add_argument("--max-target-len", type=int, default=192)
     p.add_argument("--self-condition", action="store_true")
     p.add_argument("--epochs", type=int, default=1)
+    p.add_argument("--early-stop-patience", type=int, default=3)
+    p.add_argument("--early-stop-min-delta", type=float, default=1e-4)
     p.add_argument("--batch-size", type=int, default=2)
     p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument("--save-every-epoch", action="store_true")
+    p.add_argument("--top-k-checkpoints", type=int, default=3)
     p.add_argument("--output-dir", default="outputs/models/dlm_latent")
     return p.parse_args()
 
@@ -123,15 +129,20 @@ def main():
     denoiser = LatentDenoiser(hidden, self_condition=args.self_condition).to(device)
     schedule = DiffusionSchedule(args.timesteps, args.beta_start, args.beta_end, device=str(device))
     optim = torch.optim.Adam(denoiser.parameters(), lr=args.lr)
+    history = []
+    best_val = float("inf")
+    best_epoch = 0
+    no_improve = 0
+    best_ckpts = []  # list of (val_loss, epoch, path)
 
     for ep in range(args.epochs):
         train_loss = train_or_eval_epoch(train_ds, True, backbone, tokenizer, denoiser, schedule, optim, args, device)
         with torch.no_grad():
             val_loss = train_or_eval_epoch(val_ds, False, backbone, tokenizer, denoiser, schedule, optim, args, device)
         print(f"epoch={ep+1} train_loss={train_loss:.4f} val_loss={val_loss:.4f}")
+        history.append({"epoch": ep + 1, "train_loss": train_loss, "val_loss": val_loss})
 
-    torch.save(
-        {
+        ckpt = {
             "denoiser": denoiser.state_dict(),
             "config": {
                 "model": args.model,
@@ -143,14 +154,104 @@ def main():
                 "self_condition": args.self_condition,
                 "hidden": hidden,
             },
-        },
-        os.path.join(args.output_dir, "latent_denoiser.pt"),
-    )
+            "epoch": ep + 1,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+        }
+
+        if args.save_every_epoch:
+            ep_path = os.path.join(
+                args.output_dir,
+                f"latent_denoiser_epoch{ep+1}_val{val_loss:.6f}.pt",
+            )
+            torch.save(ckpt, ep_path)
+
+        if val_loss < best_val - args.early_stop_min_delta:
+            best_val = val_loss
+            best_epoch = ep + 1
+            no_improve = 0
+            # Canonical best checkpoint path (always points to current best)
+            torch.save(ckpt, os.path.join(args.output_dir, "latent_denoiser.pt"))
+        else:
+            no_improve += 1
+
+        # Save epoch checkpoint with val_loss in filename, then keep only top-k by val loss.
+        scored_path = os.path.join(
+            args.output_dir,
+            f"best_epoch{ep+1}_val{val_loss:.6f}.pt",
+        )
+        torch.save(ckpt, scored_path)
+        best_ckpts.append((val_loss, ep + 1, scored_path))
+        best_ckpts.sort(key=lambda x: x[0])  # lower val_loss is better
+        if len(best_ckpts) > args.top_k_checkpoints:
+            to_remove = best_ckpts[args.top_k_checkpoints:]
+            best_ckpts = best_ckpts[: args.top_k_checkpoints]
+            for _, _, rm_path in to_remove:
+                if os.path.exists(rm_path):
+                    os.remove(rm_path)
+
+        if no_improve >= args.early_stop_patience:
+            print(f"Early stopping at epoch {ep+1} (best epoch: {best_epoch}, best val: {best_val:.4f})")
+            break
+
+    # If early-stop never improved due to edge case, fallback save final.
+    if not os.path.exists(os.path.join(args.output_dir, "latent_denoiser.pt")):
+        torch.save(
+            {
+                "denoiser": denoiser.state_dict(),
+                "config": {
+                    "model": args.model,
+                    "timesteps": args.timesteps,
+                    "beta_start": args.beta_start,
+                    "beta_end": args.beta_end,
+                    "max_source_len": args.max_source_len,
+                    "max_target_len": args.max_target_len,
+                    "self_condition": args.self_condition,
+                    "hidden": hidden,
+                },
+                "epoch": len(history),
+                "train_loss": history[-1]["train_loss"] if history else None,
+                "val_loss": history[-1]["val_loss"] if history else None,
+            },
+            os.path.join(args.output_dir, "latent_denoiser.pt"),
+        )
+
+    # Save loss history as JSON and CSV.
+    with open(os.path.join(args.output_dir, "loss_history.json"), "w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(args.output_dir, "loss_history.csv"), "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["epoch", "train_loss", "val_loss"])
+        writer.writeheader()
+        writer.writerows(history)
+
+    # Plot loss curves.
+    if history:
+        xs = [h["epoch"] for h in history]
+        train_ys = [h["train_loss"] for h in history]
+        val_ys = [h["val_loss"] for h in history]
+        plt.figure(figsize=(8, 5))
+        plt.plot(xs, train_ys, marker="o", label="Train Loss")
+        plt.plot(xs, val_ys, marker="s", label="Val Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss (MSE)")
+        plt.title("Latent Denoiser Training Curve")
+        plt.grid(alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(args.output_dir, "loss_curve.png"), dpi=160)
+        plt.close()
     tokenizer.save_pretrained(args.output_dir)
     backbone.config.save_pretrained(args.output_dir)
 
     with open(os.path.join(args.output_dir, "train_meta.json"), "w", encoding="utf-8") as f:
-        json.dump(vars(args), f, indent=2, ensure_ascii=False)
+        meta = vars(args).copy()
+        meta["best_epoch"] = best_epoch
+        meta["best_val_loss"] = best_val
+        meta["top_k_kept"] = [
+            {"epoch": ep, "val_loss": vl, "path": path}
+            for (vl, ep, path) in best_ckpts
+        ]
+        json.dump(meta, f, indent=2, ensure_ascii=False)
 
     print(f"Saved latent model artifacts to {args.output_dir}")
 

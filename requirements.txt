@@ -8,3 +8,4 @@ rouge_score
 bert_score
 sentencepiece
 accelerate
+matplotlib
