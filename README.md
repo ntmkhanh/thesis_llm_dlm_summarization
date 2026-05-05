@@ -1,6 +1,6 @@
 # thesis_llm_dlm_summarization
 
-README này mô tả **đúng flow đề cương luận văn**:
+README này mô tả **flow đề cương luận văn**:
 1. Fine-tune LLM baseline trên CNN-only.
 2. Phương pháp 1 (LLM -> DLM):
    - Single-Draft (Hình 3)
@@ -11,7 +11,7 @@ README này mô tả **đúng flow đề cương luận văn**:
 3. Phương pháp 2 (DLM -> LLM decoder) theo 3 bước (Hình 6).
 4. Đánh giá ROUGE/BERTScore.
 
-## A. Dataset và split (đúng đề cương)
+## A. Dataset và split
 
 - Dataset: `cnn_dailymail` version `3.0.0`
 - Chỉ dùng mẫu CNN (`article` bắt đầu bằng `(CNN)`)
@@ -41,14 +41,7 @@ python3 -c "import torch; print(torch.cuda.is_available(), torch.cuda.device_cou
 Theo đề cương: fine-tune LLM trên CNN/DailyMail để tạo model sinh tóm tắt cơ sở.
 
 ```bash
-python3 src/pipeline/train_llm_sft.py \
-  --model Qwen/Qwen2.5-1.5B-Instruct \
-  --train-split train \
-  --val-split validation \
-  --output-dir outputs/models/llm_sft \
-  --epochs 1 \
-  --batch-size 1 \
-  --grad-accum 8
+python3 src/pipeline/train_llm_sft.py --model Qwen/Qwen2.5-1.5B-Instruct --tuning-mode qlora --train-split train --val-split validation --max-length 1024 --batch-size 1 --grad-accum 16 --fp16 --gradient-checkpointing --output-dir outputs/models/llm_sft_qlora --epochs 90
 ```
 
 ## D. Bước 2 - Phương pháp 1: LLM -> DLM
@@ -143,9 +136,9 @@ python3 src/pipeline/infer_method1_llm_dlm.py \
   --output outputs/drafts/method1_multi_aggregate_latent_learned.csv
 ```
 
-## E. Bước 3 - Phương pháp 1 bản latent diffusion thuần (mở rộng nghiên cứu)
+## E. Bước 3 - Phương pháp 1 bản latent diffusion thuần (mở rộng)
 
-Phần này là bản tách module rõ ràng theo yêu cầu mở rộng:
+Phần này là bản tách module:
 - `src/dlm/core_diffusion.py` (schedule + q/p sampler)
 - `src/dlm/latent_denoiser.py` (timestep-conditioned denoiser)
 - `src/pipeline/train_dlm_latent.py`
@@ -232,15 +225,10 @@ python3 src/evaluation/compute_metrics.py --input outputs/drafts/method2_dlm_llm
 
 ## H. So sánh baseline cũ vs pipeline mới
 
-Các script cũ vẫn giữ để baseline kỹ thuật:
+Các script cũ vẫn giữ:
 - `src/llm/generate_baseline.py`
 - `src/llm/generate_method1.py`
 - `src/llm/generate_method2.py`
 
-Bạn có thể chạy lại các script cũ để đối chiếu với pipeline mới ở `src/pipeline/*`.
+Có thể chạy lại các script cũ để so sánh với pipeline mới ở `src/pipeline/*`.
 
-## I. Mẹo chạy nhanh debug
-
-- Thêm `--max-train-samples`, `--max-val-samples`, `--max-samples` để thử nhanh.
-- Sau khi ổn mới chạy full `train/validation/test`.
-- Nên lưu mỗi run vào file output khác nhau để không ghi đè.
