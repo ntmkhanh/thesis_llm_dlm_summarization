@@ -9,3 +9,5 @@ bert_score
 sentencepiece
 accelerate
 matplotlib
+peft
+bitsandbytes
