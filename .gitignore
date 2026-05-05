@@ -12,9 +12,9 @@ env/
 # Hugging Face / cache
 .cache/
 
-# Outputs
-data/
-outputs/
+# Outputs (root-level only)
+/data/
+/outputs/
 
 # IDE
 .vscode/
