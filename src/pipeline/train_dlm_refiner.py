@@ -54,6 +54,13 @@ def _build_training_args(args_class, **kwargs):
         out["save_strategy"] = "epoch"
     return args_class(**out)
 
+
+def _build_trainer(trainer_class, **kwargs):
+    sig = inspect.signature(trainer_class.__init__)
+    supported = set(sig.parameters.keys())
+    out = {k: v for k, v in kwargs.items() if k in supported}
+    return trainer_class(**out)
+
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
@@ -118,12 +125,14 @@ def main():
         report_to="none",
     )
 
-    trainer = Seq2SeqTrainer(
+    trainer = _build_trainer(
+        Seq2SeqTrainer,
         model=model,
         args=targs,
         train_dataset=train_tok,
         eval_dataset=val_tok,
         tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model),
     )
 
