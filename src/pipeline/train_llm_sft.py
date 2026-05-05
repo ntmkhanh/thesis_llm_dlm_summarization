@@ -130,7 +130,6 @@ def main():
     def preprocess(batch):
         texts = [format_example(a, h) for a, h in zip(batch["article"], batch["highlights"])]
         tok = tokenizer(texts, truncation=True, max_length=args.max_length)
-        tok["labels"] = [ids[:] for ids in tok["input_ids"]]
         return tok
 
     train_tok = train_ds.map(preprocess, batched=True, remove_columns=train_ds.column_names)
