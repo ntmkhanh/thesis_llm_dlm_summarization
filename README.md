@@ -34,6 +34,25 @@ Method 2:
 python3 src/llm/generate_method2.py --split "test" --output outputs/drafts/method2_plan_decode.csv
 ```
 
+Chạy theo đúng pipeline đề cương:
+
+Baseline LLM:
+```bash
+python3 src/llm/generate_baseline.py --split "test" --output outputs/drafts/baseline_qwen.csv
+```
+
+Phương pháp 1 (LLM draft -> refine):
+```bash
+python3 src/llm/generate_method1.py --mode single --split "test" --output outputs/drafts/method1_single.csv
+python3 src/llm/generate_method1.py --mode multi --multi-mode refine_each --num-candidates 3 --split "test" --output outputs/drafts/method1_multi_refine_each.csv
+python3 src/llm/generate_method1.py --mode multi --multi-mode aggregate_then_refine --num-candidates 3 --split "test" --output outputs/drafts/method1_multi_aggregate.csv
+```
+
+Phương pháp 2 (plan -> decode):
+```bash
+python3 src/llm/generate_method2.py --split "test" --output outputs/drafts/method2_plan_decode.csv
+```
+
 ## 3) Đánh giá
 
 ```bash
@@ -41,6 +60,8 @@ python3 src/evaluation/compute_metrics.py --input outputs/drafts/baseline_qwen.c
 python3 src/evaluation/compute_metrics.py --input outputs/drafts/method1_single.csv
 python3 src/evaluation/compute_metrics.py --input outputs/drafts/method2_plan_decode.csv
 ```
+
+Nếu cần chạy nhanh để debug, bạn có thể thay `--split "test"` bằng `--split "test[:100]"`.
 
 ## Ghi chú
 - Script đã lọc `cnn_only=True` trong loader.

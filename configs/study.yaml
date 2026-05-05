@@ -1,0 +1,13 @@
+experiment_name: cnn_full_test
+split: test
+model: Qwen/Qwen2.5-1.5B-Instruct
+methods:
+  - baseline
+  - method1_single
+  - method2_plan_decode
+metrics:
+  - rouge1
+  - rouge2
+  - rougeL
+  - rougeLsum
+  - bertscore_f1
