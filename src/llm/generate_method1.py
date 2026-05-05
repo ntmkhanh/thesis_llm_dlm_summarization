@@ -21,7 +21,7 @@ from src.llm.common import (
 def parse_args():
     parser = argparse.ArgumentParser(description="Method 1: LLM draft -> diffusion-like refinement")
     parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
-    parser.add_argument("--split", default="test[:100]")
+    parser.add_argument("--split", default="test")
     parser.add_argument("--mode", choices=["single", "multi"], default="single")
     parser.add_argument("--multi-mode", choices=["refine_each", "aggregate_then_refine"], default="refine_each")
     parser.add_argument("--num-candidates", type=int, default=3)

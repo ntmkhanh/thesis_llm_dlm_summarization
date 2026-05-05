@@ -14,7 +14,7 @@ from src.llm.common import ensure_parent_dir, load_llm, summarize_article
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate baseline summaries with an LLM")
     parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
-    parser.add_argument("--split", default="test[:100]")
+    parser.add_argument("--split", default="test")
     parser.add_argument("--max-new-tokens", type=int, default=160)
     parser.add_argument("--output", default="outputs/drafts/baseline_qwen.csv")
     return parser.parse_args()

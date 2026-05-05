@@ -21,17 +21,17 @@ pip install -r requirements.txt
 
 Baseline:
 ```bash
-python3 src/llm/generate_baseline.py --split "test[:100]" --output outputs/drafts/baseline_qwen.csv
+python3 src/llm/generate_baseline.py --split "test" --output outputs/drafts/baseline_qwen.csv
 ```
 
 Method 1:
 ```bash
-python3 src/llm/generate_method1.py --mode single --split "test[:100]" --output outputs/drafts/method1_single.csv
+python3 src/llm/generate_method1.py --mode single --split "test" --output outputs/drafts/method1_single.csv
 ```
 
 Method 2:
 ```bash
-python3 src/llm/generate_method2.py --split "test[:100]" --output outputs/drafts/method2_plan_decode.csv
+python3 src/llm/generate_method2.py --split "test" --output outputs/drafts/method2_plan_decode.csv
 ```
 
 ## 3) Đánh giá

@@ -6,7 +6,7 @@ def _is_cnn_article(article: str) -> bool:
     return text.startswith("(CNN)")
 
 
-def load_cnn(splits="test[:100]", cnn_only=True):
+def load_cnn(splits="test", cnn_only=True):
     dataset = load_dataset("cnn_dailymail", "3.0.0", split=splits)
     if cnn_only:
         dataset = dataset.filter(lambda x: _is_cnn_article(x["article"]))
