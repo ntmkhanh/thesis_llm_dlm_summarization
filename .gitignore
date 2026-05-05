@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+
+# Hugging Face / cache
+.cache/
+
+# Outputs
+data/
+outputs/
+
+# IDE
+.vscode/
+.idea/

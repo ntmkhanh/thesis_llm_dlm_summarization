@@ -1,0 +1,10 @@
+torch
+transformers
+datasets
+evaluate
+pandas
+tqdm
+rouge_score
+bert_score
+sentencepiece
+accelerate
