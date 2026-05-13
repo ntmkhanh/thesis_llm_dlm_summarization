@@ -32,6 +32,18 @@ def encode(backbone, tokenizer, texts, max_len, device):
     return enc.last_hidden_state
 
 
+def estimate_target_len(article: str, tokenizer, max_source_len: int, max_target_len: int) -> int:
+    src_ids = tokenizer(
+        [article],
+        return_tensors="pt",
+        truncation=True,
+        max_length=max_source_len,
+    )["input_ids"]
+    src_len = int(src_ids.shape[1])
+    est = max(24, int(src_len * 0.20))
+    return min(max_target_len, est)
+
+
 def reverse_from_noise(article, x_t, backbone, tokenizer, denoiser, diffusion, cfg, device):
     h_s = encode(backbone, tokenizer, [article], cfg["max_source_len"], device)
     xt = x_t
@@ -68,11 +80,9 @@ def main():
         article = ex["article"]
         reference = ex["highlights"]
 
-        # initialize from pure Gaussian noise in latent space
-        # build a latent shape proxy from source length by encoding a short template
-        template = ["summary"]
-        z_template = encode(backbone, tok, template, cfg["max_target_len"], device)
-        x_t = torch.randn_like(z_template)
+        # Initialize from Gaussian noise in latent space with an adaptive summary length.
+        target_len = estimate_target_len(article, tok, cfg["max_source_len"], cfg["max_target_len"])
+        x_t = torch.randn((1, target_len, cfg["hidden"]), device=device)
 
         x_hat = reverse_from_noise(article, x_t, backbone, tok, denoiser, diffusion, cfg, device)
         summary = decode_with_backbone(backbone, tok, x_hat, max_new_tokens=args.max_new_tokens)

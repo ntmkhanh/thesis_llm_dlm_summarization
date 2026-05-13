@@ -3,7 +3,7 @@
 Pipeline thực nghiệm tóm tắt văn bản theo đề cương luận văn:
 - Baseline LLM
 - Phương pháp 1: LLM draft -> refine
-- Phương pháp 2: plan -> decode
+- Phương pháp 2: latent diffusion transformer (article-conditioned)
 - Đánh giá ROUGE + BERTScore
 
 ## 1) Clone và tạo môi trường
@@ -31,7 +31,7 @@ python3 src/llm/generate_method1.py --mode single --split "test" --output output
 
 Method 2:
 ```bash
-python3 src/llm/generate_method2.py --split "test" --output outputs/drafts/method2_plan_decode.csv
+python3 src/pipeline/infer_method2_latent.py --method2-model-dir outputs/models/method2_latent --split "test" --output outputs/drafts/method2_latent.csv
 ```
 
 Chạy theo đúng pipeline đề cương:
@@ -48,9 +48,10 @@ python3 src/llm/generate_method1.py --mode multi --multi-mode refine_each --num-
 python3 src/llm/generate_method1.py --mode multi --multi-mode aggregate_then_refine --num-candidates 3 --split "test" --output outputs/drafts/method1_multi_aggregate.csv
 ```
 
-Phương pháp 2 (plan -> decode):
+Phương pháp 2 (Latent Diffusion Transformer):
 ```bash
-python3 src/llm/generate_method2.py --split "test" --output outputs/drafts/method2_plan_decode.csv
+python3 src/pipeline/train_method2_latent.py --model google/flan-t5-base --output-dir outputs/models/method2_latent
+python3 src/pipeline/infer_method2_latent.py --method2-model-dir outputs/models/method2_latent --split "test" --output outputs/drafts/method2_latent.csv
 ```
 
 ## 3) Đánh giá
@@ -58,7 +59,7 @@ python3 src/llm/generate_method2.py --split "test" --output outputs/drafts/metho
 ```bash
 python3 src/evaluation/compute_metrics.py --input outputs/drafts/baseline_qwen.csv
 python3 src/evaluation/compute_metrics.py --input outputs/drafts/method1_single.csv
-python3 src/evaluation/compute_metrics.py --input outputs/drafts/method2_plan_decode.csv
+python3 src/evaluation/compute_metrics.py --input outputs/drafts/method2_latent.csv
 ```
 
 Nếu cần chạy nhanh để debug, bạn có thể thay `--split "test"` bằng `--split "test[:100]"`.

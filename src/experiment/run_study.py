@@ -47,11 +47,10 @@ def main():
 
     llm_dir = str(models_dir / "llm_sft")
     dlm_dir = str(models_dir / "dlm_refiner")
-    planner_dir = str(models_dir / "method2_planner")
-    decoder_dir = str(models_dir / "method2_decoder")
+    method2_latent_dir = str(models_dir / "method2_latent")
 
     m1_csv = str(drafts_dir / "method1_llm_dlm.csv")
-    m2_csv = str(drafts_dir / "method2_dlm_llm.csv")
+    m2_csv = str(drafts_dir / "method2_latent.csv")
     baseline_csv = str(drafts_dir / "baseline_llm.csv")
     m1_single_csv = str(drafts_dir / "method1_single.csv")
     m1_multi_i_csv = str(drafts_dir / "method1_multi_refine_each.csv")
@@ -78,18 +77,10 @@ def main():
             "--max-val-samples", str(args.max_val_samples),
         ])
 
-        timing["train_method2_planner_sec"] = run_cmd([
-            "python3", "src/pipeline/train_method2_planner.py",
+        timing["train_method2_latent_sec"] = run_cmd([
+            "python3", "src/pipeline/train_method2_latent.py",
             "--model", args.dlm_model,
-            "--output-dir", planner_dir,
-            "--max-train-samples", str(args.max_train_samples),
-            "--max-val-samples", str(args.max_val_samples),
-        ])
-
-        timing["train_method2_decoder_sec"] = run_cmd([
-            "python3", "src/pipeline/train_method2_decoder.py",
-            "--model", args.dlm_model,
-            "--output-dir", decoder_dir,
+            "--output-dir", method2_latent_dir,
             "--max-train-samples", str(args.max_train_samples),
             "--max-val-samples", str(args.max_val_samples),
         ])
@@ -175,10 +166,9 @@ def main():
         "--output", m1_csv,
     ])
 
-    timing["infer_method2_dlm_llm_sec"] = run_cmd([
-        "python3", "src/pipeline/infer_method2_dlm_llm.py",
-        "--planner-model-dir", planner_dir,
-        "--decoder-model-dir", decoder_dir,
+    timing["infer_method2_latent_sec"] = run_cmd([
+        "python3", "src/pipeline/infer_method2_latent.py",
+        "--method2-model-dir", method2_latent_dir,
         "--split", args.split,
         "--max-samples", str(args.max_test_samples),
         "--output", m2_csv,
@@ -191,7 +181,7 @@ def main():
         ("method1_multi_aggregate_mean", m1_multi_ii_mean_csv),
         ("method1_multi_aggregate_learned", m1_multi_ii_learned_csv),
         ("method1_llm_dlm", m1_csv),
-        ("method2_dlm_llm", m2_csv),
+        ("method2_latent", m2_csv),
     ]:
         timing[f"eval_{name}_sec"] = run_cmd([
             "python3", "src/evaluation/compute_metrics.py",
@@ -216,7 +206,7 @@ def main():
             "method1_multi_aggregate_mean": m1_multi_ii_mean_csv,
             "method1_multi_aggregate_learned": m1_multi_ii_learned_csv,
             "method1_llm_dlm": m1_csv,
-            "method2_dlm_llm": m2_csv,
+            "method2_latent": m2_csv,
         },
         "metrics": {
             "baseline_llm": str(metrics_dir / "baseline_llm.json"),
@@ -225,7 +215,7 @@ def main():
             "method1_multi_aggregate_mean": str(metrics_dir / "method1_multi_aggregate_mean.json"),
             "method1_multi_aggregate_learned": str(metrics_dir / "method1_multi_aggregate_learned.json"),
             "method1_llm_dlm": str(metrics_dir / "method1_llm_dlm.json"),
-            "method2_dlm_llm": str(metrics_dir / "method2_dlm_llm.json"),
+            "method2_latent": str(metrics_dir / "method2_latent.json"),
         },
     }
 
