@@ -29,11 +29,20 @@ def load_llm(model_name: str):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype=dtype,
-        device_map="auto",
-    )
+    adapter_cfg = os.path.join(model_name, "adapter_config.json")
+    if os.path.exists(adapter_cfg):
+        from peft import AutoPeftModelForCausalLM
+        model = AutoPeftModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=dtype,
+            device_map="auto",
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=dtype,
+            device_map="auto",
+        )
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -76,6 +85,8 @@ def summarize_article(
     article: str,
     style: str = "3-4 concise sentences",
     max_new_tokens: int = 160,
+    num_beams: int = 1,
+    do_sample: bool = False,
 ) -> str:
     prompt = build_summary_prompt(article, style=style)
     generated = generate_text(
@@ -83,8 +94,8 @@ def summarize_article(
         model,
         prompt,
         max_new_tokens=max_new_tokens,
-        num_beams=1,
-        do_sample=False,
+        num_beams=num_beams,
+        do_sample=do_sample,
     )
     return _extract_after_tag(generated, "Summary:")
 
