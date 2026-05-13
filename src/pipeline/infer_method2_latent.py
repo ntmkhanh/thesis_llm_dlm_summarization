@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import sys
 
 import pandas as pd
@@ -20,6 +21,8 @@ def parse_args():
     p.add_argument("--method2-model-dir", required=True)
     p.add_argument("--split", default=SPLIT_TEST)
     p.add_argument("--max-samples", type=int, default=300)
+    p.add_argument("--init-mode", choices=["pure_noise", "draft_latent"], default="pure_noise")
+    p.add_argument("--t-small", type=int, default=12, help="Forward noise level for draft_latent init.")
     p.add_argument("--max-source-len", type=int, default=0, help="Override source length from checkpoint config (0=use ckpt).")
     p.add_argument("--max-new-tokens", type=int, default=192)
     p.add_argument("--output", default="outputs/drafts/method2_latent.csv")
@@ -45,11 +48,22 @@ def estimate_target_len(article: str, tokenizer, max_source_len: int, max_target
     return min(max_target_len, est)
 
 
-def reverse_from_noise(article, x_t, backbone, tokenizer, denoiser, diffusion, cfg, device):
+def build_lead_draft(article: str, max_chars: int = 600) -> str:
+    text = " ".join(article.split())
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    lead = " ".join(parts[:2]).strip()
+    if not lead:
+        lead = text[:max_chars]
+    return lead[:max_chars]
+
+
+def reverse_from_noise(article, x_t, backbone, tokenizer, denoiser, diffusion, cfg, device, start_step=None):
     with torch.inference_mode():
         h_s = encode(backbone, tokenizer, [article], cfg["max_source_len"], device)
         xt = x_t
-        for step in reversed(range(cfg["timesteps"])):
+        if start_step is None:
+            start_step = cfg["timesteps"] - 1
+        for step in reversed(range(start_step + 1)):
             t = torch.tensor([step], device=device)
             eps = denoiser(xt, t, h_s)
             xt = diffusion.p_step(xt, step, eps)
@@ -83,14 +97,25 @@ def main():
         article = ex["article"]
         reference = ex["highlights"]
 
-        # Initialize from Gaussian noise in latent space with an adaptive summary length.
         src_max_len = int(args.max_source_len) if args.max_source_len > 0 else int(cfg["max_source_len"])
-        target_len = estimate_target_len(article, tok, src_max_len, cfg["max_target_len"])
-        x_t = torch.randn((1, target_len, cfg["hidden"]), device=device)
-
         cfg_runtime = dict(cfg)
         cfg_runtime["max_source_len"] = src_max_len
-        x_hat = reverse_from_noise(article, x_t, backbone, tok, denoiser, diffusion, cfg_runtime, device)
+
+        if args.init_mode == "draft_latent":
+            draft = build_lead_draft(article)
+            z0 = encode(backbone, tok, [draft], cfg["max_target_len"], device)
+            start_step = max(0, min(cfg["timesteps"] - 1, int(args.t_small)))
+            t = torch.tensor([start_step], device=device)
+            noise = torch.randn_like(z0)
+            x_t = diffusion.q_sample(z0, t, noise)
+            x_hat = reverse_from_noise(
+                article, x_t, backbone, tok, denoiser, diffusion, cfg_runtime, device, start_step=start_step
+            )
+        else:
+            target_len = estimate_target_len(article, tok, src_max_len, cfg["max_target_len"])
+            x_t = torch.randn((1, target_len, cfg["hidden"]), device=device)
+            x_hat = reverse_from_noise(article, x_t, backbone, tok, denoiser, diffusion, cfg_runtime, device)
+
         with torch.inference_mode():
             summary = decode_with_backbone(backbone, tok, x_hat, max_new_tokens=args.max_new_tokens)
 
