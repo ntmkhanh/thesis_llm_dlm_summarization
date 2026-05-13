@@ -20,6 +20,7 @@ def parse_args():
     p.add_argument("--method2-model-dir", required=True)
     p.add_argument("--split", default=SPLIT_TEST)
     p.add_argument("--max-samples", type=int, default=300)
+    p.add_argument("--max-source-len", type=int, default=0, help="Override source length from checkpoint config (0=use ckpt).")
     p.add_argument("--max-new-tokens", type=int, default=192)
     p.add_argument("--output", default="outputs/drafts/method2_latent.csv")
     return p.parse_args()
@@ -45,12 +46,13 @@ def estimate_target_len(article: str, tokenizer, max_source_len: int, max_target
 
 
 def reverse_from_noise(article, x_t, backbone, tokenizer, denoiser, diffusion, cfg, device):
-    h_s = encode(backbone, tokenizer, [article], cfg["max_source_len"], device)
-    xt = x_t
-    for step in reversed(range(cfg["timesteps"])):
-        t = torch.tensor([step], device=device)
-        eps = denoiser(xt, t, h_s)
-        xt = diffusion.p_step(xt, step, eps)
+    with torch.inference_mode():
+        h_s = encode(backbone, tokenizer, [article], cfg["max_source_len"], device)
+        xt = x_t
+        for step in reversed(range(cfg["timesteps"])):
+            t = torch.tensor([step], device=device)
+            eps = denoiser(xt, t, h_s)
+            xt = diffusion.p_step(xt, step, eps)
     return xt
 
 
@@ -68,6 +70,7 @@ def main():
     tok = AutoTokenizer.from_pretrained(args.method2_model_dir)
     backbone = AutoModelForSeq2SeqLM.from_pretrained(cfg["model"], device_map="auto")
     device = backbone.device
+    backbone.eval()
 
     denoiser = GenieDenoiser(cfg["hidden"], num_layers=cfg["denoiser_layers"], num_heads=cfg["denoiser_heads"]).to(device)
     denoiser.load_state_dict(ckpt["denoiser"])
@@ -81,13 +84,19 @@ def main():
         reference = ex["highlights"]
 
         # Initialize from Gaussian noise in latent space with an adaptive summary length.
-        target_len = estimate_target_len(article, tok, cfg["max_source_len"], cfg["max_target_len"])
+        src_max_len = int(args.max_source_len) if args.max_source_len > 0 else int(cfg["max_source_len"])
+        target_len = estimate_target_len(article, tok, src_max_len, cfg["max_target_len"])
         x_t = torch.randn((1, target_len, cfg["hidden"]), device=device)
 
-        x_hat = reverse_from_noise(article, x_t, backbone, tok, denoiser, diffusion, cfg, device)
-        summary = decode_with_backbone(backbone, tok, x_hat, max_new_tokens=args.max_new_tokens)
+        cfg_runtime = dict(cfg)
+        cfg_runtime["max_source_len"] = src_max_len
+        x_hat = reverse_from_noise(article, x_t, backbone, tok, denoiser, diffusion, cfg_runtime, device)
+        with torch.inference_mode():
+            summary = decode_with_backbone(backbone, tok, x_hat, max_new_tokens=args.max_new_tokens)
 
         rows.append({"article": article, "reference": reference, "summary": summary})
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     pd.DataFrame(rows).to_csv(args.output, index=False)
     print(f"Saved {len(rows)} rows to {args.output}")
