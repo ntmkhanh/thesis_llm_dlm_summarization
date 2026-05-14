@@ -1,7 +1,7 @@
 import pandas as pd
 import evaluate
 
-INPUT_PATH = "outputs/drafts/baseline_qwen.csv"
+INPUT_PATH = "outputs/drafts/baseline_llama.csv"
 
 def main():
     # Load the generated summaries and references from the CSV file

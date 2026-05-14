@@ -22,15 +22,25 @@ from src.dlm.paper_aligned_diffusion import paper_build_prompt, paper_corrupt_te
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Train DLM refiner (denoising seq2seq)")
-    p.add_argument("--model", default="google/flan-t5-base")
+    p = argparse.ArgumentParser(
+        description=(
+            "Train the Method 1 DLM refiner. The --model argument is the "
+            "seq2seq denoising backbone; diffusion behavior is implemented by "
+            "the timestep corruption/denoising objective."
+        )
+    )
+    p.add_argument(
+        "--model",
+        default="google/flan-t5-base",
+        help="Seq2seq denoising backbone for the DLM refiner, not the LLM draft generator.",
+    )
     p.add_argument("--train-split", default=SPLIT_TRAIN)
     p.add_argument("--val-split", default=SPLIT_VAL)
     p.add_argument("--max-train-samples", type=int, default=0)
     p.add_argument("--max-val-samples", type=int, default=0)
     p.add_argument("--max-source-length", type=int, default=1024)
     p.add_argument("--max-target-length", type=int, default=192)
-    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="seqdiffuseq")
+    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="diffuseq")
     p.add_argument("--diffusion-steps", type=int, default=8)
     p.add_argument("--output-dir", default="outputs/models/dlm_refiner")
     p.add_argument("--epochs", type=float, default=1.0)

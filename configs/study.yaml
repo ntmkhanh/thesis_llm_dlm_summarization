@@ -1,6 +1,11 @@
 experiment_name: cnn_full_test
 split: test
-model: Qwen/Qwen2.5-1.5B-Instruct
+llm_models:
+  qwen: Qwen/Qwen2.5-1.5B-Instruct
+  llama: meta-llama/Llama-3.2-1B-Instruct
+dlm_backbone: google/flan-t5-base
+paper_mode: diffuseq
+diffusion_steps: 8
 methods:
   - baseline
   - method1_single

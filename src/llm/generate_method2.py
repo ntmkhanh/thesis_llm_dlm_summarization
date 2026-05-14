@@ -13,7 +13,7 @@ from src.llm.common import ensure_parent_dir, generate_text, load_llm
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Method 2: structure plan -> final decode")
-    parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
+    parser.add_argument("--model", default="meta-llama/Llama-3.2-1B-Instruct")
     parser.add_argument("--split", default="test")
     parser.add_argument("--max-new-tokens", type=int, default=180)
     parser.add_argument("--output", default="outputs/drafts/method2_plan_decode.csv")

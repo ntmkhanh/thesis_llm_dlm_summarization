@@ -13,12 +13,12 @@ from src.llm.common import ensure_parent_dir, load_llm, summarize_article
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate baseline summaries with an LLM")
-    parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
+    parser.add_argument("--model", default="meta-llama/Llama-3.2-1B-Instruct")
     parser.add_argument("--split", default="test")
     parser.add_argument("--max-samples", type=int, default=100)
     parser.add_argument("--max-new-tokens", type=int, default=50)
     parser.add_argument("--num-beams", type=int, default=4)
-    parser.add_argument("--output", default="outputs/drafts/baseline_qwen.csv")
+    parser.add_argument("--output", default="outputs/drafts/baseline_llama.csv")
     return parser.parse_args()
 
 

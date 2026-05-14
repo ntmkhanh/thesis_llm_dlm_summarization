@@ -23,7 +23,7 @@ def parse_args():
     p.add_argument("--llm-model-dir", required=True)
     p.add_argument("--dlm-model-dir", required=True)
     p.add_argument("--split", default=SPLIT_TRAIN)
-    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="seqdiffuseq")
+    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="diffuseq")
     p.add_argument("--diffusion-steps", type=int, default=8)
     p.add_argument("--num-candidates", type=int, default=3)
     p.add_argument("--max-samples", type=int, default=5000)

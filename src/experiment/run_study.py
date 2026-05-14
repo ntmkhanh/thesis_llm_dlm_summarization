@@ -17,9 +17,9 @@ def run_cmd(cmd):
 def parse_args():
     p = argparse.ArgumentParser(description="Run paper-aligned summarization study")
     p.add_argument("--split", default="test")
-    p.add_argument("--llm-model", default="Qwen/Qwen2.5-1.5B-Instruct")
+    p.add_argument("--llm-model", default="meta-llama/Llama-3.2-1B-Instruct")
     p.add_argument("--dlm-model", default="google/flan-t5-base")
-    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="seqdiffuseq")
+    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="diffuseq")
     p.add_argument("--diffusion-steps", type=int, default=8)
     p.add_argument("--train-models", action="store_true")
     p.add_argument("--max-train-samples", type=int, default=0)

@@ -17,6 +17,8 @@ from transformers import (
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from src.pipeline.common import (
+    SPLIT_MODE_NATIVE,
+    SPLIT_MODE_CNN_70_20_10,
     SPLIT_TRAIN,
     SPLIT_VAL,
     build_summarization_prompt,
@@ -26,9 +28,11 @@ from src.pipeline.common import (
 
 def parse_args():
     p = argparse.ArgumentParser(description="Train LLM SFT for CNN summarization")
-    p.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
+    p.add_argument("--model", default="meta-llama/Llama-3.2-1B-Instruct")
     p.add_argument("--train-split", default=SPLIT_TRAIN)
     p.add_argument("--val-split", default=SPLIT_VAL)
+    p.add_argument("--split-mode", choices=[SPLIT_MODE_NATIVE, SPLIT_MODE_CNN_70_20_10], default=SPLIT_MODE_NATIVE)
+    p.add_argument("--split-seed", type=int, default=42)
     p.add_argument("--max-train-samples", type=int, default=3000)
     p.add_argument("--max-val-samples", type=int, default=300)
     p.add_argument("--max-length", type=int, default=1024)
@@ -119,8 +123,8 @@ def main():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    train_ds = load_cnn_split(args.train_split)
-    val_ds = load_cnn_split(args.val_split)
+    train_ds = load_cnn_split(args.train_split, split_mode=args.split_mode, seed=args.split_seed)
+    val_ds = load_cnn_split(args.val_split, split_mode=args.split_mode, seed=args.split_seed)
 
     if args.max_train_samples > 0:
         train_ds = train_ds.select(range(min(args.max_train_samples, len(train_ds))))

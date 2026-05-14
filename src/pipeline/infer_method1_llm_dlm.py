@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 
 from src.dlm.latent_fusion_gating import load_gating
 from src.dlm.paper_aligned_diffusion import DiffusionConfig, PaperAlignedDLMRefiner
+from src.hybrid.method1_single_draft import Method1SingleDraftHybridModel
 from src.pipeline.common import SPLIT_TEST, build_summarization_prompt, load_cnn_split
 
 
@@ -19,7 +20,7 @@ def parse_args():
     p.add_argument("--llm-model-dir", required=True)
     p.add_argument("--dlm-model-dir", required=True)
     p.add_argument("--split", default=SPLIT_TEST)
-    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="seqdiffuseq")
+    p.add_argument("--paper-mode", choices=["diffuseq", "seqdiffuseq"], default="diffuseq")
     p.add_argument("--diffusion-steps", type=int, default=8)
     p.add_argument(
         "--draft-mode",
@@ -90,19 +91,18 @@ def main():
     if args.max_samples > 0:
         ds = ds.select(range(min(args.max_samples, len(ds))))
 
-    llm_tok = AutoTokenizer.from_pretrained(args.llm_model_dir)
-    if llm_tok.pad_token is None:
-        llm_tok.pad_token = llm_tok.eos_token
-    llm = AutoModelForCausalLM.from_pretrained(args.llm_model_dir, device_map="auto")
-
-    dlm_refiner = PaperAlignedDLMRefiner(
-        model_name_or_path=args.dlm_model_dir,
-        config=DiffusionConfig(
-            mode=args.paper_mode,
-            num_steps=args.diffusion_steps,
-            max_new_tokens=args.max_new_tokens,
-        ),
+    single_draft_model = Method1SingleDraftHybridModel(
+        llm_model_dir=args.llm_model_dir,
+        dlm_model_dir=args.dlm_model_dir,
+        paper_mode=args.paper_mode,
+        diffusion_steps=args.diffusion_steps,
+        max_new_tokens=args.max_new_tokens,
     )
+
+    llm_tok = single_draft_model.llm_tokenizer
+    llm = single_draft_model.llm
+
+    dlm_refiner = single_draft_model.dlm_refiner
     gating = None
     if args.latent_fusion == "learned":
         if not args.latent_fusion_model:
@@ -116,9 +116,14 @@ def main():
         ref = ex["highlights"]
         if args.draft_mode == "single":
             # Proposal Figure 3: Single-Draft
-            draft = llm_generate(llm_tok, llm, build_summarization_prompt(article), args.max_new_tokens)
-            refined = dlm_refiner.refine(article, draft)
-            rows.append({"article": article, "reference": ref, "draft": draft, "summary": refined, "draft_mode": "single"})
+            out = single_draft_model.summarize(article, ref)
+            rows.append({
+                "article": out.article,
+                "reference": out.reference,
+                "draft": out.draft,
+                "summary": out.summary,
+                "draft_mode": out.draft_mode,
+            })
             continue
 
         drafts = llm_generate_candidates(llm_tok, llm, article, args.num_candidates, args.max_new_tokens)

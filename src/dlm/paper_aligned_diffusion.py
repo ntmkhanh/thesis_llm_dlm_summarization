@@ -12,7 +12,7 @@ from src.dlm.latent_fusion_gating import LatentFusionGating
 
 @dataclass
 class DiffusionConfig:
-    mode: str = "seqdiffuseq"  # diffuseq | seqdiffuseq
+    mode: str = "diffuseq"  # diffuseq | seqdiffuseq
     num_steps: int = 8
     max_source_len: int = 1024
     max_new_tokens: int = 192
@@ -25,8 +25,9 @@ class PaperAlignedDLMRefiner:
     - DiffuSeq-style: timestep-conditioned corruption + iterative denoise.
     - SeqDiffuSeq-style: adds self-conditioning text and position-adaptive noise.
 
-    This is a practical thesis implementation inspired by paper mechanisms,
-    while still using HF seq2seq backbones for trainability.
+    The HF seq2seq model, for example FLAN-T5, is only the denoising backbone.
+    The DLM behavior comes from the explicit corruption schedule, timestep
+    conditioning, and repeated reverse-denoising loop implemented here.
     """
 
     def __init__(self, model_name_or_path: str, config: DiffusionConfig):

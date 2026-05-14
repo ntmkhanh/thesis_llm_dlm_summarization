@@ -19,8 +19,8 @@ from src.llm.common import (
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Method 1: LLM draft -> diffusion-like refinement")
-    parser.add_argument("--model", default="Qwen/Qwen2.5-1.5B-Instruct")
+    parser = argparse.ArgumentParser(description="Legacy LLM-only draft -> editor refinement")
+    parser.add_argument("--model", default="meta-llama/Llama-3.2-1B-Instruct")
     parser.add_argument("--split", default="test")
     parser.add_argument("--mode", choices=["single", "multi"], default="single")
     parser.add_argument("--multi-mode", choices=["refine_each", "aggregate_then_refine"], default="refine_each")
@@ -59,6 +59,10 @@ def _generate_candidates(tokenizer, model, article: str, num_candidates: int, ma
 
 def main():
     args = parse_args()
+    print(
+        "WARNING: src/llm/generate_method1.py is the legacy LLM-only editor baseline. "
+        "Use src/pipeline/infer_method1_llm_dlm.py for thesis Method 1: LLM draft -> DLM refine."
+    )
     dataset = load_cnn(splits=args.split, cnn_only=True)
     tokenizer, model = load_llm(args.model)
 

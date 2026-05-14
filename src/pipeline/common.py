@@ -2,7 +2,7 @@ import random
 import re
 from typing import List
 
-from datasets import load_dataset
+from datasets import concatenate_datasets, load_dataset
 
 DATASET_NAME = "cnn_dailymail"
 DATASET_VERSION = "3.0.0"
@@ -10,6 +10,9 @@ SPLIT_TRAIN = "train"
 SPLIT_VAL = "validation"
 SPLIT_TEST = "test"
 VALID_SPLITS = {SPLIT_TRAIN, SPLIT_VAL, SPLIT_TEST}
+SPLIT_MODE_NATIVE = "native"
+SPLIT_MODE_CNN_70_20_10 = "cnn_70_20_10"
+VALID_SPLIT_MODES = {SPLIT_MODE_NATIVE, SPLIT_MODE_CNN_70_20_10}
 
 
 def is_cnn_article(article: str) -> bool:
@@ -17,13 +20,65 @@ def is_cnn_article(article: str) -> bool:
     return text.startswith("(CNN)")
 
 
-def load_cnn_split(split: str):
+def _validate_split(split: str):
     if split not in VALID_SPLITS:
         raise ValueError(f"split must be one of {sorted(VALID_SPLITS)}, got: {split}")
 
+
+def _load_native_cnn_split(split: str):
     ds = load_dataset(DATASET_NAME, DATASET_VERSION, split=split)
     ds = ds.filter(lambda x: is_cnn_article(x["article"]))
     return ds
+
+
+def _load_all_cnn_articles():
+    parts = [
+        load_dataset(DATASET_NAME, DATASET_VERSION, split=SPLIT_TRAIN),
+        load_dataset(DATASET_NAME, DATASET_VERSION, split=SPLIT_VAL),
+        load_dataset(DATASET_NAME, DATASET_VERSION, split=SPLIT_TEST),
+    ]
+    ds = concatenate_datasets(parts)
+    return ds.filter(lambda x: is_cnn_article(x["article"]))
+
+
+def _select_ratio_split(ds, split: str):
+    n = len(ds)
+    train_end = int(n * 0.70)
+    val_end = train_end + int(n * 0.20)
+    if split == SPLIT_TRAIN:
+        return ds.select(range(0, train_end))
+    if split == SPLIT_VAL:
+        return ds.select(range(train_end, val_end))
+    return ds.select(range(val_end, n))
+
+
+def load_cnn_split(split: str, split_mode: str = SPLIT_MODE_NATIVE, seed: int = 42):
+    _validate_split(split)
+    if split_mode not in VALID_SPLIT_MODES:
+        raise ValueError(f"split_mode must be one of {sorted(VALID_SPLIT_MODES)}, got: {split_mode}")
+
+    if split_mode == SPLIT_MODE_NATIVE:
+        return _load_native_cnn_split(split)
+
+    ds = _load_all_cnn_articles()
+    ds = ds.shuffle(seed=seed)
+    return _select_ratio_split(ds, split)
+
+
+def load_cnn_split_counts(split_mode: str = SPLIT_MODE_CNN_70_20_10, seed: int = 42):
+    if split_mode == SPLIT_MODE_NATIVE:
+        return {split: len(load_cnn_split(split, split_mode=split_mode, seed=seed)) for split in sorted(VALID_SPLITS)}
+
+    ds = _load_all_cnn_articles()
+    n = len(ds)
+    train_end = int(n * 0.70)
+    val_end = train_end + int(n * 0.20)
+    return {
+        SPLIT_TRAIN: train_end,
+        SPLIT_VAL: val_end - train_end,
+        SPLIT_TEST: n - val_end,
+        "total": n,
+    }
 
 
 def load_train_split():
