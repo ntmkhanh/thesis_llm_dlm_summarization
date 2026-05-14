@@ -80,6 +80,14 @@ Thông tin checkpoint tốt nhất được ghi ở:
 finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/best_checkpoint.json
 ```
 
+Loss history được lưu cùng thư mục:
+
+```text
+finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/trainer_log_history.json
+finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/train_loss_history.json
+finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/eval_loss_history.json
+```
+
 Nếu muốn full fine-tuning:
 
 ```bash

@@ -185,6 +185,22 @@ def main():
     )
 
     trainer.train()
+    log_history = trainer.state.log_history
+    train_loss_history = [
+        item for item in log_history
+        if "loss" in item and "eval_loss" not in item
+    ]
+    eval_loss_history = [
+        item for item in log_history
+        if "eval_loss" in item
+    ]
+    with open(os.path.join(args.output_dir, "trainer_log_history.json"), "w", encoding="utf-8") as f:
+        json.dump(log_history, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(args.output_dir, "train_loss_history.json"), "w", encoding="utf-8") as f:
+        json.dump(train_loss_history, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(args.output_dir, "eval_loss_history.json"), "w", encoding="utf-8") as f:
+        json.dump(eval_loss_history, f, indent=2, ensure_ascii=False)
+
     best_info = {
         "best_model_checkpoint": getattr(trainer.state, "best_model_checkpoint", None),
         "best_metric": getattr(trainer.state, "best_metric", None),
@@ -197,6 +213,9 @@ def main():
     tokenizer.save_pretrained(args.output_dir)
     print(f"Saved best LLM SFT model to {args.output_dir}")
     print(f"Best checkpoint metadata: {os.path.join(args.output_dir, 'best_checkpoint.json')}")
+    print(f"Trainer log history: {os.path.join(args.output_dir, 'trainer_log_history.json')}")
+    print(f"Train loss history: {os.path.join(args.output_dir, 'train_loss_history.json')}")
+    print(f"Eval loss history: {os.path.join(args.output_dir, 'eval_loss_history.json')}")
 
 
 if __name__ == "__main__":
