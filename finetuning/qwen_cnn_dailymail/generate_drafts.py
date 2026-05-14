@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -27,7 +28,7 @@ def main():
     args = parse_args()
     output = args.output or default_output(args.split)
     cmd = [
-        "python3", "src/pipeline/generate_llm_drafts.py",
+        sys.executable, "src/pipeline/generate_llm_drafts.py",
         "--llm-model-dir", args.model_dir,
         "--split", args.split,
         "--split-mode", "native",

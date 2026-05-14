@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -31,7 +32,7 @@ def main():
     args = parse_args()
     if not args.skip_train:
         run([
-            "python3", str(THIS_DIR / "train.py"),
+            sys.executable, str(THIS_DIR / "train.py"),
             "--output-dir", args.model_dir,
             "--max-train-samples", str(args.max_train_samples),
             "--max-val-samples", str(args.max_val_samples),
@@ -46,7 +47,7 @@ def main():
         ("test", args.max_test_samples),
     ]:
         run([
-            "python3", str(THIS_DIR / "generate_drafts.py"),
+            sys.executable, str(THIS_DIR / "generate_drafts.py"),
             "--model-dir", args.model_dir,
             "--split", split,
             "--max-samples", str(max_samples),

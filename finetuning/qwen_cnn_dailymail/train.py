@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -35,7 +36,7 @@ def parse_args():
 def main():
     args = parse_args()
     cmd = [
-        "python3", "src/pipeline/train_llm_sft.py",
+        sys.executable, "src/pipeline/train_llm_sft.py",
         "--model", args.model,
         "--output-dir", args.output_dir,
         "--split-mode", "native",
