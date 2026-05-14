@@ -67,10 +67,17 @@ Trong thư mục này, Hugging Face `Trainer` sẽ lưu checkpoint theo epoch, v
 finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/checkpoint-*
 ```
 
-Sau khi train xong, final model/tokenizer cũng được lưu ngay tại:
+Trainer sẽ chọn checkpoint tốt nhất theo `eval_loss`. Sau khi train xong, best model/tokenizer
+được lưu ngay tại:
 
 ```text
 finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft
+```
+
+Thông tin checkpoint tốt nhất được ghi ở:
+
+```text
+finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/best_checkpoint.json
 ```
 
 Nếu muốn full fine-tuning:

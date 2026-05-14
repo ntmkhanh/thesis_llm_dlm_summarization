@@ -19,6 +19,7 @@ def parse_args():
     p.add_argument("--split-seed", type=int, default=42)
     p.add_argument("--epochs", type=float, default=1.0)
     p.add_argument("--tuning-mode", choices=["full", "lora", "qlora"], default="lora")
+    p.add_argument("--save-total-limit", type=int, default=3)
     p.add_argument("--max-new-tokens", type=int, default=180)
     return p.parse_args()
 
@@ -39,6 +40,7 @@ def main():
             "--split-seed", str(args.split_seed),
             "--epochs", str(args.epochs),
             "--tuning-mode", args.tuning_mode,
+            "--save-total-limit", str(args.save_total_limit),
         ])
 
     for split, max_samples in [

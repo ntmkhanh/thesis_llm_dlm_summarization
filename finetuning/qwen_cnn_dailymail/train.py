@@ -22,6 +22,7 @@ def parse_args():
     p.add_argument("--lr", type=float, default=2e-5)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--grad-accum", type=int, default=8)
+    p.add_argument("--save-total-limit", type=int, default=3)
     p.add_argument("--max-length", type=int, default=1024)
     p.add_argument("--tuning-mode", choices=["full", "lora", "qlora"], default="lora")
     p.add_argument("--lora-r", type=int, default=16)
@@ -47,6 +48,7 @@ def main():
         "--lr", str(args.lr),
         "--batch-size", str(args.batch_size),
         "--grad-accum", str(args.grad_accum),
+        "--save-total-limit", str(args.save_total_limit),
         "--max-length", str(args.max_length),
         "--tuning-mode", args.tuning_mode,
         "--lora-r", str(args.lora_r),

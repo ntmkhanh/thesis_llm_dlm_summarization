@@ -1,5 +1,6 @@
 import argparse
 import inspect
+import json
 import os
 import sys
 from typing import Optional
@@ -41,6 +42,7 @@ def parse_args():
     p.add_argument("--lr", type=float, default=2e-5)
     p.add_argument("--batch-size", type=int, default=1)
     p.add_argument("--grad-accum", type=int, default=8)
+    p.add_argument("--save-total-limit", type=int, default=3)
     p.add_argument("--fp16", action="store_true")
     p.add_argument("--bf16", action="store_true")
     p.add_argument("--gradient-checkpointing", action="store_true")
@@ -159,7 +161,10 @@ def main():
         gradient_accumulation_steps=args.grad_accum,
         
         logging_steps=20,
-        save_total_limit=2,
+        save_total_limit=args.save_total_limit,
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
         fp16=args.fp16,
         bf16=args.bf16,
         gradient_checkpointing=args.gradient_checkpointing,
@@ -180,9 +185,18 @@ def main():
     )
 
     trainer.train()
+    best_info = {
+        "best_model_checkpoint": getattr(trainer.state, "best_model_checkpoint", None),
+        "best_metric": getattr(trainer.state, "best_metric", None),
+        "metric_for_best_model": "eval_loss",
+        "greater_is_better": False,
+    }
+    with open(os.path.join(args.output_dir, "best_checkpoint.json"), "w", encoding="utf-8") as f:
+        json.dump(best_info, f, indent=2, ensure_ascii=False)
     trainer.save_model(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
-    print(f"Saved LLM SFT model to {args.output_dir}")
+    print(f"Saved best LLM SFT model to {args.output_dir}")
+    print(f"Best checkpoint metadata: {os.path.join(args.output_dir, 'best_checkpoint.json')}")
 
 
 if __name__ == "__main__":
