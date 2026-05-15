@@ -19,7 +19,7 @@ def parse_args():
     p.add_argument("--split-seed", type=int, default=42)
     p.add_argument("--epochs", type=float, default=1.0)
     p.add_argument("--lr", type=float, default=2e-4)
-    p.add_argument("--batch-size", type=int, default=4)
+    p.add_argument("--batch-size", type=int, default=2)
     p.add_argument("--grad-accum", type=int, default=8)
     p.add_argument("--max-length", type=int, default=1024)
     p.add_argument("--tuning-mode", choices=["full", "lora", "qlora"], default="lora")
