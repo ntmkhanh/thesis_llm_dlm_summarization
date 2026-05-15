@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MODEL = "meta-llama/Llama-3.2-1B-Instruct"
+DEFAULT_MODEL = "meta-llama/Llama-3.2-3B-Instruct"
 DEFAULT_OUTPUT_DIR = "finetuning/llama_cnn_dailymail/checkpoints/llama_cnn_dailymail_sft"
 
 
