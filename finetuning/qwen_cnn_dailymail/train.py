@@ -1,6 +1,5 @@
 import argparse
 import subprocess
-import sys
 from pathlib import Path
 
 
@@ -15,14 +14,13 @@ def parse_args():
     )
     p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
-    p.add_argument("--max-train-samples", type=int, default=0, help="0 means use all CNN-only samples from the original train split")
-    p.add_argument("--max-val-samples", type=int, default=0, help="0 means use all CNN-only samples from the original validation split")
+    p.add_argument("--max-train-samples", type=int, default=0)
+    p.add_argument("--max-val-samples", type=int, default=0)
     p.add_argument("--split-seed", type=int, default=42)
     p.add_argument("--epochs", type=float, default=1.0)
-    p.add_argument("--lr", type=float, default=2e-5)
-    p.add_argument("--batch-size", type=int, default=1)
+    p.add_argument("--lr", type=float, default=2e-4)
+    p.add_argument("--batch-size", type=int, default=4)
     p.add_argument("--grad-accum", type=int, default=8)
-    p.add_argument("--save-total-limit", type=int, default=3)
     p.add_argument("--max-length", type=int, default=1024)
     p.add_argument("--tuning-mode", choices=["full", "lora", "qlora"], default="lora")
     p.add_argument("--lora-r", type=int, default=16)
@@ -37,7 +35,7 @@ def parse_args():
 def main():
     args = parse_args()
     cmd = [
-        sys.executable, "src/pipeline/train_llm_sft.py",
+        "python3", "src/pipeline/train_llm_sft.py",
         "--model", args.model,
         "--output-dir", args.output_dir,
         "--split-mode", "native",
@@ -48,7 +46,6 @@ def main():
         "--lr", str(args.lr),
         "--batch-size", str(args.batch_size),
         "--grad-accum", str(args.grad_accum),
-        "--save-total-limit", str(args.save_total_limit),
         "--max-length", str(args.max_length),
         "--tuning-mode", args.tuning_mode,
         "--lora-r", str(args.lora_r),
