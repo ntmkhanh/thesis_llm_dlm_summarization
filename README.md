@@ -73,6 +73,8 @@ Hai LLM draft generators mặc định:
 - `Qwen/Qwen2.5-1.5B-Instruct`
 - `meta-llama/Llama-3.2-1B-Instruct`
 
+Fine-tuning Qwen nằm ở `finetuning/qwen_cnn_dailymail`; fine-tuning LLaMA nằm ở `finetuning/llama_cnn_dailymail`.
+
 DiffuSeq refiner dùng code chính thức từ `Shark-NLP/DiffuSeq`, nhận `src` là
 `document + draft summary` và `trg` là reference summary.
 
