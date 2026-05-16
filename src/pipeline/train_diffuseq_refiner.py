@@ -2,6 +2,7 @@ import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 def parse_args():
@@ -29,10 +30,29 @@ def parse_args():
     return p.parse_args()
 
 
+def patch_diffuseq_padding(diffuseq_dir: str):
+    """Make DiffuSeq preprocessing less memory hungry on small machines."""
+    path = Path(diffuseq_dir) / "diffuseq" / "text_datasets.py"
+    if not path.exists():
+        raise FileNotFoundError(f"DiffuSeq text dataset file not found: {path}")
+
+    text = path.read_text(encoding="utf-8")
+    if "desc=f\"padding\",\n        batch_size=64," in text:
+        return
+
+    old = "        desc=f\"padding\",\n    )"
+    new = "        desc=f\"padding\",\n        batch_size=64,\n    )"
+    if old not in text:
+        return
+    path.write_text(text.replace(old, new), encoding="utf-8")
+    print(f"Patched DiffuSeq padding batch_size=64 in {path}")
+
+
 def main():
     args = parse_args()
     diffuseq_dir = os.path.abspath(args.diffuseq_dir)
     data_dir = os.path.abspath(args.data_dir)
+    patch_diffuseq_padding(diffuseq_dir)
 
     cmd = [
         sys.executable, "-m", "torch.distributed.launch",
