@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -71,11 +72,30 @@ def patch_diffuseq_padding(diffuseq_dir: str):
     print(f"DiffuSeq padding map not found in {path}")
 
 
+def patch_diffuseq_numpy_aliases(diffuseq_dir: str):
+    """Patch deprecated NumPy aliases used by the upstream DiffuSeq repo."""
+    replacements = {
+        "np.int": "int",
+        "np.float": "float",
+        "np.bool": "bool",
+        "np.object": "object",
+    }
+    for path in Path(diffuseq_dir).rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        new_text = text
+        for old, new in replacements.items():
+            new_text = re.sub(rf"(?<![A-Za-z0-9_]){re.escape(old)}(?![A-Za-z0-9_])", new, new_text)
+        if new_text != text:
+            path.write_text(new_text, encoding="utf-8")
+            print(f"Patched deprecated NumPy aliases in {path}")
+
+
 def main():
     args = parse_args()
     diffuseq_dir = os.path.abspath(args.diffuseq_dir)
     data_dir = os.path.abspath(args.data_dir)
     patch_diffuseq_padding(diffuseq_dir)
+    patch_diffuseq_numpy_aliases(diffuseq_dir)
 
     cmd = [
         sys.executable, "-m", "torch.distributed.launch",
