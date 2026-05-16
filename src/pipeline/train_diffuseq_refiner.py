@@ -37,15 +37,38 @@ def patch_diffuseq_padding(diffuseq_dir: str):
         raise FileNotFoundError(f"DiffuSeq text dataset file not found: {path}")
 
     text = path.read_text(encoding="utf-8")
-    if "desc=f\"padding\",\n        batch_size=64," in text:
+    patched = (
+        "desc=f\"padding\",\n"
+        "        batch_size=1,\n"
+        "        load_from_cache_file=False,"
+    )
+    if patched in text:
+        print(f"DiffuSeq padding patch already active in {path}")
         return
 
-    old = "        desc=f\"padding\",\n    )"
-    new = "        desc=f\"padding\",\n        batch_size=64,\n    )"
-    if old not in text:
+    old_blocks = [
+        "        desc=f\"padding\",\n"
+        "        batch_size=64,\n"
+        "    )",
+        "        desc=f\"padding\",\n"
+        "    )",
+    ]
+    new = (
+        "        desc=f\"padding\",\n"
+        "        batch_size=1,\n"
+        "        load_from_cache_file=False,\n"
+        "    )"
+    )
+    for old in old_blocks:
+        if old in text:
+            path.write_text(text.replace(old, new), encoding="utf-8")
+            print(f"Patched DiffuSeq padding batch_size=1 and disabled cache in {path}")
+            return
+
+    if "desc=f\"padding\"" in text:
+        print(f"DiffuSeq padding map was found but not patched automatically in {path}")
         return
-    path.write_text(text.replace(old, new), encoding="utf-8")
-    print(f"Patched DiffuSeq padding batch_size=64 in {path}")
+    print(f"DiffuSeq padding map not found in {path}")
 
 
 def main():
