@@ -10,7 +10,6 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
 )
@@ -36,7 +35,9 @@ def parse_args():
     p.add_argument("--split-seed", type=int, default=42)
     p.add_argument("--max-train-samples", type=int, default=3000)
     p.add_argument("--max-val-samples", type=int, default=300)
-    p.add_argument("--max-length", type=int, default=1024)
+    p.add_argument("--max-length", type=int, default=1104, help="Legacy total cap; source/target lengths are controlled separately.")
+    p.add_argument("--max-source-length", type=int, default=1024)
+    p.add_argument("--max-target-length", type=int, default=80)
     p.add_argument("--output-dir", default="outputs/models/llm_sft")
     p.add_argument("--epochs", type=float, default=1.0)
     p.add_argument("--lr", type=float, default=2e-5)
@@ -57,6 +58,52 @@ def parse_args():
 def format_example(article: str, summary: str) -> str:
     prompt = build_summarization_prompt(article)
     return f"{prompt} {summary}"
+
+
+def build_sft_example(tokenizer, article: str, summary: str, max_source_length: int, max_target_length: int):
+    prompt = build_summarization_prompt(article)
+    prompt_ids = tokenizer(
+        prompt,
+        truncation=True,
+        max_length=max_source_length,
+        add_special_tokens=True,
+    )["input_ids"]
+
+    target_max = max(1, max_target_length - 1)
+    target_ids = tokenizer(
+        " " + str(summary),
+        truncation=True,
+        max_length=target_max,
+        add_special_tokens=False,
+    )["input_ids"]
+    if tokenizer.eos_token_id is not None:
+        target_ids = target_ids + [tokenizer.eos_token_id]
+
+    input_ids = prompt_ids + target_ids
+    return {
+        "input_ids": input_ids,
+        "attention_mask": [1] * len(input_ids),
+        "labels": [-100] * len(prompt_ids) + target_ids,
+    }
+
+
+def build_causal_sft_collator(tokenizer):
+    def collate(features):
+        max_len = max(len(f["input_ids"]) for f in features)
+        input_ids = []
+        attention_mask = []
+        labels = []
+        for f in features:
+            pad_len = max_len - len(f["input_ids"])
+            input_ids.append(f["input_ids"] + [tokenizer.pad_token_id] * pad_len)
+            attention_mask.append(f["attention_mask"] + [0] * pad_len)
+            labels.append(f["labels"] + [-100] * pad_len)
+        return {
+            "input_ids": torch.tensor(input_ids, dtype=torch.long),
+            "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+            "labels": torch.tensor(labels, dtype=torch.long),
+        }
+    return collate
 
 
 
@@ -134,9 +181,21 @@ def main():
         val_ds = val_ds.select(range(min(args.max_val_samples, len(val_ds))))
 
     def preprocess(batch):
-        texts = [format_example(a, h) for a, h in zip(batch["article"], batch["highlights"])]
-        tok = tokenizer(texts, truncation=True, max_length=args.max_length)
-        return tok
+        rows = [
+            build_sft_example(
+                tokenizer,
+                article,
+                summary,
+                args.max_source_length,
+                args.max_target_length,
+            )
+            for article, summary in zip(batch["article"], batch["highlights"])
+        ]
+        return {
+            "input_ids": [row["input_ids"] for row in rows],
+            "attention_mask": [row["attention_mask"] for row in rows],
+            "labels": [row["labels"] for row in rows],
+        }
 
     train_tok = train_ds.map(preprocess, batched=True, remove_columns=train_ds.column_names)
     val_tok = val_ds.map(preprocess, batched=True, remove_columns=val_ds.column_names)
@@ -171,7 +230,7 @@ def main():
         report_to="none",
     )
 
-    collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    collator = build_causal_sft_collator(tokenizer)
 
     trainer = _build_trainer(
         Trainer,

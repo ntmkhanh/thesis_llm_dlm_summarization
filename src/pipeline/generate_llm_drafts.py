@@ -25,7 +25,7 @@ def parse_args():
     p.add_argument("--split-mode", choices=[SPLIT_MODE_NATIVE, SPLIT_MODE_CNN_70_20_10], default=SPLIT_MODE_NATIVE)
     p.add_argument("--split-seed", type=int, default=42)
     p.add_argument("--max-samples", type=int, default=0)
-    p.add_argument("--max-new-tokens", type=int, default=180)
+    p.add_argument("--max-new-tokens", type=int, default=80)
     p.add_argument("--output", required=True)
     return p.parse_args()
 

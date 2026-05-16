@@ -3,6 +3,7 @@ import glob
 import json
 import os
 import subprocess
+import sys
 
 import pandas as pd
 
@@ -50,7 +51,7 @@ def main():
     model_dir = os.path.abspath(args.model_dir)
 
     cmd = [
-        "python3", "-u", "scripts/run_decode.py",
+        sys.executable, "-u", "scripts/run_decode.py",
         "--model_dir", model_dir,
         "--seed", str(args.seed),
         "--step", str(args.step),

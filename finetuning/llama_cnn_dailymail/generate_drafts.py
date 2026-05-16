@@ -15,7 +15,7 @@ def parse_args():
     p.add_argument("--split", choices=["train", "validation", "test"], default="test")
     p.add_argument("--max-samples", type=int, default=0, help="0 means use all CNN-only samples from the original split")
     p.add_argument("--split-seed", type=int, default=42)
-    p.add_argument("--max-new-tokens", type=int, default=180)
+    p.add_argument("--max-new-tokens", type=int, default=80)
     p.add_argument("--output", default="")
     return p.parse_args()
 

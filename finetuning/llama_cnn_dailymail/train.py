@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MODEL = "meta-llama/Llama-3.2-3B-Instruct"
+DEFAULT_MODEL = "meta-llama/Llama-3.2-1B-Instruct"
 DEFAULT_OUTPUT_DIR = "finetuning/llama_cnn_dailymail/checkpoints/llama_cnn_dailymail_sft"
 
 
@@ -23,7 +23,9 @@ def parse_args():
     p.add_argument("--batch-size", type=int, default=2)
     p.add_argument("--grad-accum", type=int, default=8)
     p.add_argument("--save-total-limit", type=int, default=3)
-    p.add_argument("--max-length", type=int, default=1024)
+    p.add_argument("--max-length", type=int, default=1104)
+    p.add_argument("--max-source-length", type=int, default=1024)
+    p.add_argument("--max-target-length", type=int, default=80)
     p.add_argument("--tuning-mode", choices=["full", "lora", "qlora"], default="lora")
     p.add_argument("--lora-r", type=int, default=16)
     p.add_argument("--lora-alpha", type=int, default=32)
@@ -50,6 +52,8 @@ def main():
         "--grad-accum", str(args.grad_accum),
         "--save-total-limit", str(args.save_total_limit),
         "--max-length", str(args.max_length),
+        "--max-source-length", str(args.max_source_length),
+        "--max-target-length", str(args.max_target_length),
         "--tuning-mode", args.tuning_mode,
         "--lora-r", str(args.lora_r),
         "--lora-alpha", str(args.lora_alpha),

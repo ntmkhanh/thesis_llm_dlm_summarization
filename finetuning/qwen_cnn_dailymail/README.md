@@ -21,6 +21,14 @@ Dataset:
 cnn_dailymail 3.0.0
 ```
 
+Token config đang dùng:
+
+```text
+article / input: max_source_length = 1024
+summary / highlights: max_target_length = 80
+draft generation: max_new_tokens = 80
+```
+
 Chỉ lấy phần CNN trong dataset. Code loader dùng split gốc `train`, `validation`, `test`
 của CNN/DailyMail rồi lọc các article bắt đầu bằng `(CNN)`, nên DailyMail bị loại.
 
@@ -38,9 +46,9 @@ Không dùng `.select(range(500))`, `.select(range(100))`, `.select(range(50))` 
 Kiểm tra nhanh số lượng mẫu CNN-only:
 
 ```bash
-python3 finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split train
-python3 finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split validation
-python3 finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split test
+python finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split train
+python finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split validation
+python finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split test
 ```
 
 ## 1) Fine-tune Qwen
@@ -48,9 +56,11 @@ python3 finetuning/qwen_cnn_dailymail/verify_cnn_only.py --split test
 Mặc định script dùng LoRA để nhẹ hơn full fine-tuning:
 
 ```bash
-python3 finetuning/qwen_cnn_dailymail/train.py \
+python finetuning/qwen_cnn_dailymail/train.py \
   --max-train-samples 0 \
   --max-val-samples 0 \
+  --max-source-length 1024 \
+  --max-target-length 80 \
   --epochs 1 \
   --tuning-mode lora
 ```
@@ -91,7 +101,7 @@ finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft/eval_loss_histo
 Nếu muốn full fine-tuning:
 
 ```bash
-python3 finetuning/qwen_cnn_dailymail/train.py --tuning-mode full
+python finetuning/qwen_cnn_dailymail/train.py --tuning-mode full
 ```
 
 ## 2) Sinh Draft Summary
@@ -99,20 +109,23 @@ python3 finetuning/qwen_cnn_dailymail/train.py --tuning-mode full
 Sinh draft cho train/validation/test:
 
 ```bash
-python3 finetuning/qwen_cnn_dailymail/generate_drafts.py \
+python finetuning/qwen_cnn_dailymail/generate_drafts.py \
   --model-dir finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft \
   --split train \
-  --max-samples 0
+  --max-samples 0 \
+  --max-new-tokens 80
 
-python3 finetuning/qwen_cnn_dailymail/generate_drafts.py \
+python finetuning/qwen_cnn_dailymail/generate_drafts.py \
   --model-dir finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft \
   --split validation \
-  --max-samples 0
+  --max-samples 0 \
+  --max-new-tokens 80
 
-python3 finetuning/qwen_cnn_dailymail/generate_drafts.py \
+python finetuning/qwen_cnn_dailymail/generate_drafts.py \
   --model-dir finetuning/qwen_cnn_dailymail/checkpoints/qwen_cnn_dailymail_sft \
   --split test \
-  --max-samples 0
+  --max-samples 0 \
+  --max-new-tokens 80
 ```
 
 Output mặc định:
@@ -126,7 +139,7 @@ outputs/drafts/qwen_cnn_dailymail/qwen_test_drafts.csv
 ## 3) Chạy Trọn Bước Qwen
 
 ```bash
-python3 finetuning/qwen_cnn_dailymail/run_all.py \
+python finetuning/qwen_cnn_dailymail/run_all.py \
   --max-train-samples 0 \
   --max-val-samples 0 \
   --max-test-samples 0 \
@@ -138,9 +151,34 @@ Trong các lệnh trên, `0` nghĩa là lấy toàn bộ mẫu CNN-only của sp
 Sau bước này, dùng draft CSV để chuẩn bị data cho DiffuSeq:
 
 ```bash
-python3 src/data/prepare_diffuseq_refine_data.py \
+python src/data/prepare_diffuseq_refine_data.py \
   --train-drafts outputs/drafts/qwen_cnn_dailymail/qwen_train_drafts.csv \
   --valid-drafts outputs/drafts/qwen_cnn_dailymail/qwen_validation_drafts.csv \
   --test-drafts outputs/drafts/qwen_cnn_dailymail/qwen_test_drafts.csv \
+  --max-draft-words 80 \
+  --max-reference-words 80 \
   --output-dir outputs/diffuseq_data/qwen_refine
+```
+
+Train DiffuSeq refiner:
+
+```bash
+python src/pipeline/train_diffuseq_refiner.py \
+  --data-dir outputs/diffuseq_data/qwen_refine \
+  --dataset qwen_cnn_refine \
+  --learning-steps 50000 \
+  --save-interval 10000 \
+  --batch-size 64 \
+  --microbatch 16 \
+  --seq-len 512 \
+  --notes qwen_cnn_refine
+```
+
+Decode refined summary trên test split:
+
+```bash
+python src/pipeline/infer_diffuseq_refiner.py \
+  --model-dir external/DiffuSeq/diffusion_models/<TEN_THU_MUC_CHECKPOINT> \
+  --split test \
+  --output outputs/refined/qwen_diffuseq_test.csv
 ```

@@ -17,8 +17,8 @@ def parse_args():
     p.add_argument("--test-drafts", required=True)
     p.add_argument("--output-dir", required=True)
     p.add_argument("--max-article-words", type=int, default=360)
-    p.add_argument("--max-draft-words", type=int, default=90)
-    p.add_argument("--max-reference-words", type=int, default=90)
+    p.add_argument("--max-draft-words", type=int, default=80)
+    p.add_argument("--max-reference-words", type=int, default=80)
     return p.parse_args()
 
 

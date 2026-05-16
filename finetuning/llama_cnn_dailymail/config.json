@@ -14,5 +14,7 @@
   "default_max_val_samples": 0,
   "default_max_test_samples": 0,
   "default_epochs": 1,
-  "default_max_new_tokens": 180
+  "default_max_source_length": 1024,
+  "default_max_target_length": 80,
+  "default_max_new_tokens": 80
 }

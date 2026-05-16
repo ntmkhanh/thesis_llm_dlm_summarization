@@ -1,6 +1,7 @@
 import argparse
 import os
 import subprocess
+import sys
 
 
 def parse_args():
@@ -34,7 +35,7 @@ def main():
     data_dir = os.path.abspath(args.data_dir)
 
     cmd = [
-        "python3", "-m", "torch.distributed.launch",
+        sys.executable, "-m", "torch.distributed.launch",
         f"--nproc_per_node={args.nproc_per_node}",
         f"--master_port={args.master_port}",
         "--use_env",
