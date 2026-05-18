@@ -8,10 +8,10 @@ import pandas as pd
 def parse_args():
     parser = argparse.ArgumentParser(description="Compute ROUGE and BERTScore from summary CSV")
     parser.add_argument("--input", default="outputs/drafts/baseline_llama.csv")
-    parser.add_argument("--pred-col", default="summary")
-    parser.add_argument("--ref-col", default="reference")
+    parser.add_argument("--pred-col", "--prediction-col", dest="pred_col", default="summary")
+    parser.add_argument("--ref-col", "--reference-col", dest="ref_col", default="reference")
     parser.add_argument("--lang", default="en")
-    parser.add_argument("--output-json", default="")
+    parser.add_argument("--output-json", "--output", dest="output_json", default="")
     return parser.parse_args()
 
 
