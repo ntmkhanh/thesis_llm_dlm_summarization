@@ -2,6 +2,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -30,15 +31,26 @@ def latest_sample_file(diffuseq_dir: str, model_dir: str) -> str:
     return max(files, key=os.path.getmtime)
 
 
+def clean_diffuseq_text(text: str) -> str:
+    text = str(text or "")
+    for token in ("[PAD]", "[CLS]", "[SEP]", "[UNK]", "<pad>", "<s>", "</s>"):
+        text = text.replace(token, " ")
+    text = text.replace(" ##", "")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
 def samples_to_csv(sample_path: str, output: str):
     rows = []
     with open(sample_path, "r", encoding="utf-8") as f:
         for line in f:
             item = json.loads(line)
+            raw_recover = item.get("recover", "")
             rows.append({
-                "summary": item.get("recover", ""),
-                "reference": item.get("reference", ""),
-                "source": item.get("source", ""),
+                "summary": clean_diffuseq_text(raw_recover),
+                "raw_summary": raw_recover,
+                "reference": clean_diffuseq_text(item.get("reference", "")),
+                "source": clean_diffuseq_text(item.get("source", "")),
             })
     os.makedirs(os.path.dirname(output), exist_ok=True)
     pd.DataFrame(rows).to_csv(output, index=False)

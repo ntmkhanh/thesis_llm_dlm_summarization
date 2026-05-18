@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 
 import evaluate
 import pandas as pd
@@ -12,6 +13,7 @@ def parse_args():
     parser.add_argument("--ref-col", "--reference-col", dest="ref_col", default="reference")
     parser.add_argument("--lang", default="en")
     parser.add_argument("--output-json", "--output", dest="output_json", default="")
+    parser.add_argument("--no-clean", action="store_true")
     return parser.parse_args()
 
 
@@ -22,12 +24,30 @@ def _to_float(value):
         return value
 
 
+def clean_text(text: str) -> str:
+    text = str(text or "")
+    for token in ("[PAD]", "[CLS]", "[SEP]", "[UNK]", "<pad>", "<s>", "</s>"):
+        text = text.replace(token, " ")
+    text = text.replace(" ##", "")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def avg_words(texts):
+    if not texts:
+        return 0.0
+    return sum(len(str(text).split()) for text in texts) / len(texts)
+
+
 def main():
     args = parse_args()
     df = pd.read_csv(args.input)
 
     predictions = df[args.pred_col].fillna("").tolist()
     references = df[args.ref_col].fillna("").tolist()
+    if not args.no_clean:
+        predictions = [clean_text(text) for text in predictions]
+        references = [clean_text(text) for text in references]
 
     rouge = evaluate.load("rouge")
     bertscore = evaluate.load("bertscore")
@@ -37,6 +57,9 @@ def main():
 
     results = {
         "n_samples": len(df),
+        "empty_predictions": sum(1 for text in predictions if not text.strip()),
+        "prediction_avg_words": avg_words(predictions),
+        "reference_avg_words": avg_words(references),
         "rouge1": _to_float(rouge_scores.get("rouge1", 0.0)),
         "rouge2": _to_float(rouge_scores.get("rouge2", 0.0)),
         "rougeL": _to_float(rouge_scores.get("rougeL", 0.0)),
