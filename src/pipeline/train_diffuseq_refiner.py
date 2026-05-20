@@ -26,6 +26,7 @@ def parse_args():
     p.add_argument("--schedule-sampler", default="lossaware")
     p.add_argument("--vocab", default="bert")
     p.add_argument("--config-name", default="bert-base-uncased")
+    p.add_argument("--use-plm-init", choices=["no", "bert"], default="no")
     p.add_argument("--seed", type=int, default=102)
     p.add_argument("--notes", default="cnn_dailymail_refine")
     return p.parse_args()
@@ -117,6 +118,7 @@ def main():
         "--data_dir", data_dir,
         "--vocab", args.vocab,
         "--config_name", args.config_name,
+        "--use_plm_init", args.use_plm_init,
         "--seq_len", str(args.seq_len),
         "--schedule_sampler", args.schedule_sampler,
         "--notes", args.notes,
