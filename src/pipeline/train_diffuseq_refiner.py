@@ -91,12 +91,37 @@ def patch_diffuseq_numpy_aliases(diffuseq_dir: str):
             print(f"Patched deprecated NumPy aliases in {path}")
 
 
+def patch_diffuseq_wandb_stub(diffuseq_dir: str):
+    """Disable wandb calls in the upstream DiffuSeq scripts."""
+    path = Path(diffuseq_dir) / "wandb.py"
+    stub = '''class _Config:
+    def update(self, *args, **kwargs):
+        return None
+
+
+config = _Config()
+
+
+def init(*args, **kwargs):
+    return None
+
+
+def log(*args, **kwargs):
+    return None
+'''
+    if path.exists() and path.read_text(encoding="utf-8") == stub:
+        return
+    path.write_text(stub, encoding="utf-8")
+    print(f"Installed DiffuSeq wandb no-op stub at {path}")
+
+
 def main():
     args = parse_args()
     diffuseq_dir = os.path.abspath(args.diffuseq_dir)
     data_dir = os.path.abspath(args.data_dir)
     patch_diffuseq_padding(diffuseq_dir)
     patch_diffuseq_numpy_aliases(diffuseq_dir)
+    patch_diffuseq_wandb_stub(diffuseq_dir)
 
     cmd = [
         sys.executable, "-m", "torch.distributed.launch",
